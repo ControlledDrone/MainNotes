@@ -87,7 +87,7 @@ def main():
         lmList = detector.findPosition(img)
         if len(lmList) != 0:
             # print(lmList[4])
-            control_drone(img, lmList[4])
+            control_drone(img, lmList[9])
 
         cTime = time.time()
         fps = 1 / (cTime - pTime)
