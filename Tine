@@ -44,7 +44,6 @@ class handDetector():
                     cv2.circle(img, (cx, cy), 5, (255, 0, 255), cv2.FILLED)
         return lmList
 
-
 def control_drone(img, handPos):
     x, y = handPos[1:]
     h, w = img.shape[:2]
@@ -73,11 +72,10 @@ def control_drone(img, handPos):
     elif x < screen_center_w:
         print(f'LEFT {velocity}')
 
-
 def start_cv():
     pTime = 0
     cTime = 0
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     detector = handDetector()
     while True:
         success, img = cap.read()
@@ -98,7 +96,7 @@ def start_cv():
         
         k=cv2.waitKey(1)
         if k & 0xFF == ord('q'):  # close on key 'q'
-            print("Closing...")
+            print("Closing")
             break
         
     cap.release()
