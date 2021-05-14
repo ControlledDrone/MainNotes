@@ -1,5 +1,4 @@
 import cv2
-import os 
 import numpy as np
 import time
 from djitellopy import tello
@@ -75,7 +74,7 @@ def control_drone(img, handPos):
         print(f'LEFT {velocity}')
 
 
-def main():
+def start_cv():
     pTime = 0
     cTime = 0
     cap = cv2.VideoCapture(0)
@@ -103,6 +102,11 @@ def main():
         
     cap.release()
     cv2.destroyAllWindows()
+
+# The main function 
+def main():
+    "Starting GUI..."
+    start_cv()
 
 if __name__ == "__main__":
     main()
