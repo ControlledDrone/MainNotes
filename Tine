@@ -98,6 +98,7 @@ def start_cv():
         
         k=cv2.waitKey(1)
         if k & 0xFF == ord('q'):  # close on key 'q'
+            print("Closing...")
             break
         
     cap.release()
