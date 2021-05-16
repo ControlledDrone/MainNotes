@@ -90,8 +90,10 @@ def control_drone(img, handPos):
     # create message
     if x > screen_center_w:
         print(f'RIGHT {velocity}')
+        me.takeoff()
     elif x < screen_center_w:
         print(f'LEFT {velocity}')
+        me.land()
 
 
 def start_cv():
