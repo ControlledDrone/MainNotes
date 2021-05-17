@@ -18,6 +18,8 @@ def getKeyboardInput():
 
     if dc.getKey("q"): me.land()
     if dc.getKey("e"): me.takeoff()
+    if dc.getKey == 32: me.emergency() # Space
+
 
     return [lr, fb, ud, yv]
 
