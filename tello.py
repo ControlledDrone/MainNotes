@@ -361,7 +361,7 @@ class Tello:
         """Tello rotate x degree clockwise.
         Arguments:
             x: 1-360
-
+ 
         Returns:
             bool: True for successful, False for unsuccessful
         """
