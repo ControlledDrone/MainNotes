@@ -3,29 +3,13 @@ import numpy as np
 import time
 from djitellopy import tello
 import mediapipe as mp
-import droneControls as dc
-
+import math
 me = tello.Tello()
 me.connect()
-dc.init()
-
-###################################
-
-
-def getKeyboardInput():
-    lr, fb, ud, yv = 0, 0, 0, 0
-    speed = 50
-
-    if dc.getKey("q"): me.land()
-    if dc.getKey("e"): me.takeoff()
-    if dc.getKey == 32: me.emergency() # Space
-
-
-    return [lr, fb, ud, yv]
 
 
 
-###################################
+
 
 class handDetector():
     def __init__(self, mode=False, maxHands=2, detectionCon=0.5, trackCon=0.5):
@@ -61,7 +45,7 @@ class handDetector():
                 # print(id, cx, cy)
                 lmList.append([id, cx, cy])
                 if draw:
-                    cv2.circle(img, (cx, cy), 5, (255, 0, 255), cv2.FILLED)
+                    cv2.circle(img, (cx, cy), 2, (255, 0, 255), cv2.FILLED)
         return lmList
 
 
@@ -70,7 +54,6 @@ def control_drone(img, handPos):
     h, w = img.shape[:2]
     screen_center_w = w / 2
     screen_center_h = h / 2
-
 
     # create and area where no message is sent
     dead_zone_size = 50
@@ -87,15 +70,15 @@ def control_drone(img, handPos):
     # draw distance to center
     # +50 to go 50 pixels down in the screen from landmark position
 
-    cv2.line(img, (x, y + 50), (int(w / 2), int(h / 2)), (255, 0, 0), 5)
+    cv2.line(img, (x, y), (int(w / 2), int(h / 2)), (255, 0, 0), 5)
 
     # create message
-    if x > screen_center_w:
-        print(f'RIGHT {velocity}')
-        me.takeoff()
-    elif x < screen_center_w:
-        print(f'LEFT {velocity}')
-        me.land()
+    #if x > screen_center_w:
+        #print(f'RIGHT {velocity}')
+        # me.takeoff()
+    #elif x < screen_center_w:
+        #print(f'LEFT {velocity}')
+        # me.land()
 
 
 def start_cv():
@@ -111,6 +94,28 @@ def start_cv():
         if len(lmList) != 0:
             control_drone(img, lmList[9])
 
+            x1, y1 = lmList[9][1], lmList[9][2]
+            x2, y2 = lmList[0][1], lmList[0][2]
+            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+
+            cv2.circle(img, (x1, y1), 10, (0, 0, 0), cv2.FILLED)
+            cv2.circle(img, (x2, y2), 10, (0, 0, 0), cv2.FILLED)
+            cv2.line(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
+            #cv2.circle(img, (cx, cy), 10, (0, 0, 0), cv2.FILLED)
+
+            # https://morioh.com/p/9ce670a59fc3
+            length = math.hypot(x2 - x1, y2 - y1)
+            #print(length)
+
+            if length < 130 :
+                print("Flying backwards x 20 Speed")
+
+
+
+        else:
+            print("DRONE IS HOVERING")
+
+
         cTime = time.time()
         fps = 1 / (cTime - pTime)
         pTime = cTime
@@ -120,12 +125,11 @@ def start_cv():
 
         cv2.imshow("Image", img)
 
-        vals = getKeyboardInput()
         k = cv2.waitKey(1)
         if k & 0xFF == ord('q'):  # close on key 'q'
             print("Closing")
             break
-
+    me.end()
     cap.release()
     cv2.destroyAllWindows()
 
