@@ -108,31 +108,52 @@ def start_cv():
 
             # https://morioh.com/p/9ce670a59fc3
             length = math.hypot(x2 - x1, y2 - y1)
-            print(length)
+            #print(length)¨
 
+            me.takeoff()
+            speed = me.set_speed=20
             #backwards
             if length < 140 and length > 110:
+                me.move_back(1)
+                speed+10
                 print("Flying backwards x 10 Speed")
 
             elif length < 110 and length > 80:
+                me.move_back(1)
+                speed+20
                 print("Flying backwards x 20 Speed")
             
             elif length < 80 and length > 50 :
+                me.move_back(1)
+                speed+30
                 print("Flying backwards x 30 Speed")
 
             #forwards
             if length > 160 and length < 190:
+                me.forward()
+                speed+10
                 print("Flying forwards x 10 Speed")
 
             elif length > 190 and length < 220:
+                me.move_forward(1)
+                speed+20
                 print("Flying forwards x 20 Speed")
             
             elif length > 220 and length < 250 :
+                me.move_forward(1)
+                speed+30
                 print("Flying forwards x 30 Speed")
+            
+            if cv2.waitKey(1) & 0xFF == ord('l'):  # close on key 'q'
+                me.land()
+                me.end()
+                print("Landing")
+                break
 
         else:
-            print("DRONE IS HOVERING")
+            print("DRONE IS HOVERING") 
 
+        
         cTime = time.time()
         fps = 1 / (cTime - pTime)
         pTime = cTime
@@ -149,7 +170,7 @@ def start_cv():
         if k & 0xFF == ord('q'):  # close on key 'q'
             print("Closing")
             break
-    me.end()
+    
     cap.release()
     cv2.destroyAllWindows()
 
