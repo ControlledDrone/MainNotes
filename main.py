@@ -52,7 +52,7 @@ class handDetector():
 
 
 def control_drone(img, handPos):
-    x, y = handPos[1:]
+    x, y = handPos[0:]
     h, w = img.shape[:2]
     screen_center_w = w / 2
     screen_center_h = h / 2
@@ -94,7 +94,6 @@ def start_cv():
         img = detector.findHands(img)
         lmList = detector.findPosition(img)
         if len(lmList) != 0:
-            control_drone(img, lmList[9])
 
             x1, y1 = lmList[9][1], lmList[9][2]
             x2, y2 = lmList[0][1], lmList[0][2]
@@ -103,11 +102,14 @@ def start_cv():
             cv2.circle(img, (x1, y1), 10, (0, 0, 0), cv2.FILLED)
             cv2.circle(img, (x2, y2), 10, (0, 0, 0), cv2.FILLED)
             cv2.line(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
-            #cv2.circle(img, (cx, cy), 10, (0, 0, 0), cv2.FILLED)
+            cv2.circle(img, (cx, cy), 10, (0, 0, 0), cv2.FILLED)
+
+            control_drone(img, [cx, cy])
 
             # https://morioh.com/p/9ce670a59fc3
             length = math.hypot(x2 - x1, y2 - y1)
             #print(length)
+           
 
             if length < 130 :
                 print("Flying backwards x 20 Speed")
