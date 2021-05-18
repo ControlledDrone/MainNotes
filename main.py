@@ -120,6 +120,9 @@ def start_cv():
     pTime = 0
     cTime = 0
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    # Set width and height 
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     detector = handDetector()
     battery_status = tello_battery(tello)
     me.takeoff()
