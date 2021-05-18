@@ -4,12 +4,14 @@ import time
 from djitellopy import tello
 import mediapipe as mp
 import math
+
 me = tello.Tello()
 me.connect()
 
-
-
-
+def tello_battery(tello): 
+    global battery_status
+    battery_status = me.get_battery()
+    return int(battery_status)
 
 class handDetector():
     def __init__(self, mode=False, maxHands=2, detectionCon=0.5, trackCon=0.5):
@@ -80,12 +82,12 @@ def control_drone(img, handPos):
         #print(f'LEFT {velocity}')
         # me.land()
 
-
 def start_cv():
     pTime = 0
     cTime = 0
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     detector = handDetector()
+    battery_status = tello_battery(tello)
     while True:
         success, img = cap.read()
         img = cv2.flip(img, 1)  # mirror image
@@ -110,11 +112,8 @@ def start_cv():
             if length < 130 :
                 print("Flying backwards x 20 Speed")
 
-
-
         else:
             print("DRONE IS HOVERING")
-
 
         cTime = time.time()
         fps = 1 / (cTime - pTime)
@@ -122,6 +121,9 @@ def start_cv():
 
         cv2.putText(img, str(int(fps)), (10, 70), cv2.FONT_HERSHEY_PLAIN, 3,
                     (255, 0, 255), 3)
+
+        cv2.putText(img, "Battery: {}".format(battery_status)+"%", (5, 435),
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
         cv2.imshow("Image", img)
 
