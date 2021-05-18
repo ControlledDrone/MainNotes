@@ -71,7 +71,6 @@ def control_drone(img, handPos):
 
     # draw distance to center
     # +50 to go 50 pixels down in the screen from landmark position
-
     cv2.line(img, (x, y), (int(w / 2), int(h / 2)), (255, 0, 0), 5)
 
     # create message
@@ -82,19 +81,55 @@ def control_drone(img, handPos):
         #print(f'LEFT {velocity}')
         # me.land()
 
+def getDepthInput(length):
+    lr, fb, ud, yv = 0, 0, 0, 0 # LeftRight, ForwardBackward, UpDown, Yaw (side to side)
+    speed = 10  # (10-100)
+
+    #forwards
+    if length < 140 and length > 110:
+        fb = -speed-10
+        print("Flying forwards x 10 Speed")
+    elif length < 110 and length > 80:
+        fb = -speed-20
+        print("Flying forwards x 20 Speed")
+    elif length < 80 and length > 50 :
+        fb = -speed-30
+        print("Flying forwards x 30 Speed")
+
+    #backwards
+    if length > 160 and length < 190:
+        fb = speed+10
+        print("Flying backwards x 10 Speed")
+    elif length > 190 and length < 220:
+        fb = speed+20
+        print("Flying backwards x 20 Speed")
+    elif length > 220 and length < 250 :
+        fb = speed+30
+        print("Flying backwards x 30 Speed")
+                    
+    if cv2.waitKey(1) & 0xFF == ord('l'):  # close on key 'q'
+        me.land()
+        me.end()
+        print("Landing")
+    else:
+        print("DRONE IS HOVERING") 
+            
+    return [lr, fb, ud, yv]
+
 def start_cv():
     pTime = 0
     cTime = 0
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     detector = handDetector()
     battery_status = tello_battery(tello)
+    me.takeoff()
     while True:
         success, img = cap.read()
         img = cv2.flip(img, 1)  # mirror image
         img = detector.findHands(img)
         lmList = detector.findPosition(img)
+    
         if len(lmList) != 0:
-
             x1, y1 = lmList[9][1], lmList[9][2]
             x2, y2 = lmList[0][1], lmList[0][2]
             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
@@ -108,52 +143,11 @@ def start_cv():
 
             # https://morioh.com/p/9ce670a59fc3
             length = math.hypot(x2 - x1, y2 - y1)
-            #print(length)¨
+            #print(length)
 
-            me.takeoff()
-            speed = me.set_speed=20
-            #backwards
-            if length < 140 and length > 110:
-                me.move_back(1)
-                speed+10
-                print("Flying backwards x 10 Speed")
-
-            elif length < 110 and length > 80:
-                me.move_back(1)
-                speed+20
-                print("Flying backwards x 20 Speed")
+            vals = getDepthInput(length)
+            me.send_rc_control(vals[0], vals[1], vals[2], vals[3])
             
-            elif length < 80 and length > 50 :
-                me.move_back(1)
-                speed+30
-                print("Flying backwards x 30 Speed")
-
-            #forwards
-            if length > 160 and length < 190:
-                me.forward()
-                speed+10
-                print("Flying forwards x 10 Speed")
-
-            elif length > 190 and length < 220:
-                me.move_forward(1)
-                speed+20
-                print("Flying forwards x 20 Speed")
-            
-            elif length > 220 and length < 250 :
-                me.move_forward(1)
-                speed+30
-                print("Flying forwards x 30 Speed")
-            
-            if cv2.waitKey(1) & 0xFF == ord('l'):  # close on key 'q'
-                me.land()
-                me.end()
-                print("Landing")
-                break
-
-        else:
-            print("DRONE IS HOVERING") 
-
-        
         cTime = time.time()
         fps = 1 / (cTime - pTime)
         pTime = cTime
