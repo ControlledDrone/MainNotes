@@ -99,20 +99,36 @@ def start_cv():
             x2, y2 = lmList[0][1], lmList[0][2]
             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
 
-            cv2.circle(img, (x1, y1), 10, (0, 0, 0), cv2.FILLED)
-            cv2.circle(img, (x2, y2), 10, (0, 0, 0), cv2.FILLED)
+            cv2.circle(img, (x1, y1), 5, (0, 0, 0), cv2.FILLED)
+            cv2.circle(img, (x2, y2), 5, (0, 0, 0), cv2.FILLED)
             cv2.line(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
-            cv2.circle(img, (cx, cy), 10, (0, 0, 0), cv2.FILLED)
+            cv2.circle(img, (cx, cy), 5, (0, 0, 0), cv2.FILLED)
 
             control_drone(img, [cx, cy])
 
             # https://morioh.com/p/9ce670a59fc3
             length = math.hypot(x2 - x1, y2 - y1)
-            #print(length)
-           
+            print(length)
 
-            if length < 130 :
+            #backwards
+            if length < 130 and length > 110:
+                print("Flying backwards x 10 Speed")
+
+            elif length < 110 and length > 90:
                 print("Flying backwards x 20 Speed")
+            
+            elif length < 90 and length > 70 :
+                print("Flying backwards x 30 Speed")
+
+            #forwards
+            if length > 150 and length < 170:
+                print("Flying forwards x 10 Speed")
+
+            elif length > 170 and length < 190:
+                print("Flying forwards x 20 Speed")
+            
+            elif length > 190 and length > 210 :
+                print("Flying forwards x 30 Speed")
 
         else:
             print("DRONE IS HOVERING")
