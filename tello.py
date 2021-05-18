@@ -96,8 +96,8 @@ class Tello:
             time.sleep(diff)
 
         print('Send command: ' + command)
-        # Skal være under 1000 (helst 500-800) for ikke at få lag i webcam frame
-        timestamp = int(time.time() * 800)
+        # Skal være under 1000 (999) for ikke at få lag i webcam frame
+        timestamp = int(time.time() * 1000)
 
         self.clientSocket.sendto(command.encode('utf-8'), self.address)
 
