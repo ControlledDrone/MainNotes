@@ -111,23 +111,23 @@ def start_cv():
             print(length)
 
             #backwards
-            if length < 130 and length > 110:
+            if length < 140 and length > 110:
                 print("Flying backwards x 10 Speed")
 
-            elif length < 110 and length > 90:
+            elif length < 110 and length > 80:
                 print("Flying backwards x 20 Speed")
             
-            elif length < 90 and length > 70 :
+            elif length < 80 and length > 50 :
                 print("Flying backwards x 30 Speed")
 
             #forwards
-            if length > 150 and length < 170:
+            if length > 160 and length < 190:
                 print("Flying forwards x 10 Speed")
 
-            elif length > 170 and length < 190:
+            elif length > 190 and length < 220:
                 print("Flying forwards x 20 Speed")
             
-            elif length > 190 and length > 210 :
+            elif length > 220 and length < 250 :
                 print("Flying forwards x 30 Speed")
 
         else:
