@@ -1,19 +1,17 @@
-import cv2
-import numpy as np
-import time
+# Import the necessary modules
 from djitellopy import tello
-import mediapipe as mp
+import cv2
+import time 
+import numpy as np
 import math
+import mediapipe as mp 
 
+# Connect to our drone
 me = tello.Tello()
 me.connect()
 
-def tello_battery(tello): 
-    global battery_status
-    battery_status = me.get_battery()
-    return int(battery_status)
-
-class handDetector():
+class HandDetector():
+    # Constructor for our hand detector
     def __init__(self, mode=False, maxHands=2, detectionCon=0.5, trackCon=0.5):
         self.mode = mode
         self.maxHands = maxHands
@@ -25,6 +23,7 @@ class handDetector():
                                         self.detectionCon, self.trackCon)
         self.mpDraw = mp.solutions.drawing_utils
 
+    # Method finds hands in img and return img with hands drawn 
     def findHands(self, img, draw=True):
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(imgRGB)
@@ -36,147 +35,188 @@ class handDetector():
                                                self.mpHands.HAND_CONNECTIONS)
         return img
 
+    # Method used to return list of landmarks in img 
     def findPosition(self, img, handNo=0, draw=True):
         lmList = []
         if self.results.multi_hand_landmarks:
             myHand = self.results.multi_hand_landmarks[handNo]
             for id, lm in enumerate(myHand.landmark):
-                # print(id, lm)
                 h, w, c = img.shape
                 cx, cy = int(lm.x * w), int(lm.y * h)
-                # print(id, cx, cy)
                 lmList.append([id, cx, cy])
                 if draw:
                     cv2.circle(img, (cx, cy), 2, (255, 0, 255), cv2.FILLED)
         return lmList
 
-
-def control_drone(img, handPos):
-    x, y = handPos[0:]
-    h, w = img.shape[:2]
-    screen_center_w = w / 2
-    screen_center_h = h / 2
-
-    # create and area where no message is sent
-    dead_zone_size = 50
-    if x < screen_center_w + dead_zone_size and x > screen_center_w - dead_zone_size \
-            and y < screen_center_h + dead_zone_size and y > screen_center_h - dead_zone_size:
-        # can is in center
-        return
-
-    # calculate distance from center
-    # https://stackoverflow.com/a/1401828/4560132
-    center_dist = np.linalg.norm(np.array((x, y)) - np.array((w / 2, h / 2)))
-    velocity = (center_dist / w) * 3.0
-
-    # draw distance to center
-    # +50 to go 50 pixels down in the screen from landmark position
-    cv2.line(img, (x, y), (int(w / 2), int(h / 2)), (255, 0, 0), 5)
-
-    # create message
-    #if x > screen_center_w:
-        #print(f'RIGHT {velocity}')
-        # me.takeoff()
-    #elif x < screen_center_w:
-        #print(f'LEFT {velocity}')
-        # me.land()
-
-def getDepthInput(length):
-    lr, fb, ud, yv = 0, 0, 0, 0 # LeftRight, ForwardBackward, UpDown, Yaw (side to side)
-    speed = 10  # (10-100)
-
-    #forwards
-    if length < 140 and length > 110:
-        fb = -speed-10
-        print("Flying forwards x 10 Speed")
-    elif length < 110 and length > 80:
-        fb = -speed-20
-        print("Flying forwards x 20 Speed")
-    elif length < 80 and length > 50 :
-        fb = -speed-30
-        print("Flying forwards x 30 Speed")
-
-    #backwards
-    if length > 160 and length < 190:
-        fb = speed+10
-        print("Flying backwards x 10 Speed")
-    elif length > 190 and length < 220:
-        fb = speed+20
-        print("Flying backwards x 20 Speed")
-    elif length > 220 and length < 250 :
-        fb = speed+30
-        print("Flying backwards x 30 Speed")
-                    
-    if cv2.waitKey(1) & 0xFF == ord('l'):  # close on key 'q'
-        me.land()
-        me.end()
-        print("Landing")
-    else:
-        print("DRONE IS HOVERING") 
-            
-    return [lr, fb, ud, yv]
-
-def start_cv():
-    pTime = 0
-    cTime = 0
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-    # Set width and height 
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    detector = handDetector()
-    battery_status = tello_battery(tello)
-    me.takeoff()
-    while True:
-        success, img = cap.read()
-        img = cv2.flip(img, 1)  # mirror image
-        img = detector.findHands(img)
-        lmList = detector.findPosition(img)
+# Class used to make calculations to control the drone and get info on the drone
+class DroneControls():
+    # Method used to find the value for how much battery is left on the drone
+    def tello_battery (tello):
+        global battery_status
+        battery_status = me.get_battery()
+        return int(battery_status)
     
-        if len(lmList) != 0:
-            x1, y1 = lmList[9][1], lmList[9][2]
-            x2, y2 = lmList[0][1], lmList[0][2]
-            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+    # Method creates deadzone in the center of the img when a certain landmark is inside 
+    def createDeadZone(self, img, lmPos):
+        x, y = lmPos[0:]
+        h, w = img.shape[:2]
+        screen_center_w = w / 2
+        screen_center_h = h / 2 
 
-            cv2.circle(img, (x1, y1), 5, (0, 0, 0), cv2.FILLED)
-            cv2.circle(img, (x2, y2), 5, (0, 0, 0), cv2.FILLED)
-            cv2.line(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
-            cv2.circle(img, (cx, cy), 5, (0, 0, 0), cv2.FILLED)
+        dead_zone_size = 100
+        out_of_dz = True 
 
-            control_drone(img, [cx, cy])
+        # If landmark is inside deadzone return out_of_dz==false 
+        if x < screen_center_w + dead_zone_size and x > screen_center_w - dead_zone_size and y < screen_center_h + dead_zone_size and y > screen_center_h + dead_zone_size :
+            return out_of_dz == False 
 
-            # https://morioh.com/p/9ce670a59fc3
-            length = math.hypot(x2 - x1, y2 - y1)
-            #print(length)
+    # Method used to find the velocity from the center of the img to a certain landmark
+    def findCenterVelo (self, img, lmPos):
+        x, y = lmPos[0:]
+        h, w = img.shape[:2]
+        center_dist = np.linalg.norm(np.array((x,y))-np.array((w / 2, h / 2)))
+        velocity = (center_dist / w) * 3.0
+        # Draws velocity line in opencv
+        cv2.line(img, (x, y), (int(w / 2), int(h / 2)), (255, 0, 0), 5)
+        return velocity 
+    
+    # Method used to find the distance between two landmarks
+    def findDistanceLms (self, lmPos1, lmPos2): 
+        x1, y1 = lmPos1[1:]
+        x2, y2 = lmPos2[1:]
+        # Calculates distance - https://morioh.com/p/9ce670a59fc3
+        distance = math.hypot(x2-x1, y2-y1)
+        return distance 
+    
+    # Method used to find the middle coordinate between two landmarks
+    def findMiddleCoordinate (self, lmPos1, lmPos2):
+        x1, y1 = lmPos1[1:]
+        x2, y2 = lmPos2[1:]
+        # Calculates the middle coordinate between the two landmarks
+        x, y = (x1+x2) // 2, (y1+y2) // 2 
+        return x, y 
+    
+    # Method used to return the x and y values for a certain landmark
+    def findXY(self, lmPos1):
+        x1, y1 = lmPos1[1:]
+        return x1, y1
 
-            vals = getDepthInput(length)
-            me.send_rc_control(vals[0], vals[1], vals[2], vals[3])
-            
-        cTime = time.time()
-        fps = 1 / (cTime - pTime)
-        pTime = cTime
+# Class used to make the drone fly in certain directions
+class NavigateDrone():
+    # Method used for navigating the drone forwards and backwards based on the distance (of the depth line ) 
+    # between landmark 9 and 0
+    def fbnavigateDrone(self, distance):
+        lr, fb, ud, yv = 0, 0, 0, 0 #LeftRight, ForwardBackward, UpDown, Yaw (side to side)
+        speed = 10 
 
-        cv2.putText(img, str(int(fps)), (10, 70), cv2.FONT_HERSHEY_PLAIN, 3,
+        # Check for landing input - if true then land and end drone connection 
+        if cv2.waitKey(1) & 0xFF == ord('l'):  # close on key 'q'
+            me.land()
+            me.end()
+            print("Landing")
+        else:
+            print("DRONE IS HOVERING") 
+
+        # Forwards
+        if distance < 140 and distance > 110:
+            fb = -speed-10
+            print("Flying forwards x 10 Speed")
+        elif distance < 110 and distance > 80:
+            fb = -speed-20
+            print("Flying forwards x 20 Speed")
+        elif distance < 80 and distance > 50 :
+            fb = -speed-30
+            print("Flying forwards x 30 Speed")
+
+        # Backwards
+        if distance > 160 and distance < 190:
+            fb = speed+10
+            print("Flying backwards x 10 Speed")
+        elif distance > 190 and distance < 220:
+            fb = speed+20
+            print("Flying backwards x 20 Speed")
+        elif distance > 220 and distance < 250 :
+            fb = speed+30
+            print("Flying backwards x 30 Speed")
+                    
+        vals = lr, fb, ud, yv
+        # To be able to senc rc controls to tello drone
+        return me.send_rc_control(vals[0], vals[1], vals[2], vals[3])
+
+# Class used to run our graphical user interface with opencv 
+class GUI():
+    def startGUI(): 
+        # Class objects
+        detector = HandDetector()
+        drone = DroneControls()
+        navDrone = NavigateDrone()
+
+        # Variables used for calculating fps (frames per second)
+        pTime = 0
+        cTime = 0
+
+        # Capture video from webcam 
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        # Set width and height 
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+        battery_status = drone.tello_battery()
+        me.takeoff()
+
+        while True:
+            success, img = cap.read()
+            img = cv2.flip(img, 1)  # Mirror image
+            # Finds hands in the webcamera img
+            img = detector.findHands(img)
+            # Finds landmarks in the webcamera img 
+            lmList = detector.findPosition(img)
+    
+            if len(lmList) != 0:
+                #Finds coordinate for center of hand
+                centerCoordinate = drone.findMiddleCoordinate(lmList[9], lmList[0])
+                # Creates deadzone that activates when centercoordinate is inside 
+                drone.createDeadZone(img, centerCoordinate)
+                # Draws line used for depth
+                x9, y9 = drone.findXY(lmList[9])
+                x0, y0 = drone.findXY(lmList[0])
+                cv2.line(img, (x9, y9), (x0, y0), (255, 0, 255), 3)
+                # Draws and finds line for velocity
+                drone.findCenterVelo(img, centerCoordinate)
+                # Finds distance between two landmarks 
+                distance1 = drone.findDistanceLms(lmList[9], lmList[0])
+                # Navigate the drone forwards and backwards witg the depth line
+                navDrone.fbnavigateDrone(distance1)
+
+            # Calculates fps (frames per second)
+            cTime = time.time()
+            fps = 1 / (cTime - pTime)
+            pTime = cTime
+
+            # Add text with fps to opencv
+            cv2.putText(img, str(int(fps)), (10, 70), cv2.FONT_HERSHEY_PLAIN, 3,
                     (255, 0, 255), 3)
-
-        cv2.putText(img, "Battery: {}".format(battery_status)+"%", (5, 435),
+            
+            # Add text with battery power to opencv
+            cv2.putText(img, "Battery: {}".format(battery_status)+"%", (5, 435),
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
-        cv2.imshow("Image", img)
+            cv2.imshow("Image", img)
 
-        k = cv2.waitKey(1)
-        if k & 0xFF == ord('q'):  # close on key 'q'
-            print("Closing")
-            break
-    
-    cap.release()
-    cv2.destroyAllWindows()
-
+            k = cv2.waitKey(1)
+            if k & 0xFF == ord('q'):  # close on key 'q'
+                print("Closing")
+                break
+        
+        # Release webcamera and close all opencv windows 
+        cap.release()
+        cv2.destroyAllWindows()
 
 # The main function
-def main():
-    "Starting GUI..."
-    start_cv()
-
+def main(): 
+    print("Starting GUI...")
+    # Begin method startGUI() from class GUI()
+    GUI.startGUI()
 
 if __name__ == "__main__":
     main()
