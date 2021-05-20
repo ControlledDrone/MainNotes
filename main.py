@@ -78,7 +78,7 @@ class DroneControls():
         velocity = (center_dist / w) * 3.0
         # Draws velocity line in opencv
         cv2.line(img, (x, y), (int(w / 2), int(h / 2)), (255, 0, 0), 5)
-        return velocity 
+        return int(velocity)
     
     # Method used to find the distance between two landmarks
     def findDistanceLms (self, lmPos1, lmPos2): 
@@ -105,7 +105,7 @@ class DroneControls():
 class NavigateDrone():
     # Method used for navigating the drone forwards and backwards based on the distance (of the depth line ) 
     # between landmark 9 and 0
-    def fbnavigateDrone(self, distance):
+    def fbNavigateDrone(self, distance):
         lr, fb, ud, yv = 0, 0, 0, 0 #LeftRight, ForwardBackward, UpDown, Yaw (side to side)
         speed = 10 
 
@@ -143,6 +143,34 @@ class NavigateDrone():
         # To be able to senc rc controls to tello drone
         return me.send_rc_control(vals[0], vals[1], vals[2], vals[3])
 
+    def udTlNavigateDrone(self, noOfFingers, velocity):
+        lr, fb, ud, yv = 0, 0, 0, 0 #LeftRight, ForwardBackward, UpDown, Yaw (side to side)
+        speed = 10 
+        
+        # If zero fingers are up 
+        if noOfFingers == 0:
+            print("Landing the Drone... Stand Clear")
+            me.land()
+
+        # if thumb, pointer finger and middle finger
+        if noOfFingers == 3:
+            print("Taking off... Stand Clear")
+            me.takeoff()
+
+        # If thumb
+        if noOfFingers == 1:
+            print("Flying down...")
+            ud = -speed-(velocity*10)
+
+        # if thumb and pointer finger 
+        if noOfFingers == 2:
+            print("Flying up...")
+            ud = +speed+(velocity*10)
+
+        vals = lr, fb, ud, yv
+        # To be able to senc rc controls to tello drone
+        return me.send_rc_control(vals[0], vals[1], vals[2], vals[3])
+
 # Class used to run our graphical user interface with opencv 
 class GUI():
     def startGUI(): 
@@ -162,8 +190,7 @@ class GUI():
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
         battery_status = drone.tello_battery()
-        me.takeoff()
-
+        
         while True:
             success, img = cap.read()
             img = cv2.flip(img, 1)  # Mirror image
@@ -171,22 +198,44 @@ class GUI():
             img = detector.findHands(img)
             # Finds landmarks in the webcamera img 
             lmList = detector.findPosition(img)
+            tipIds = [4, 8, 12, 16, 20]
     
             if len(lmList) != 0:
                 #Finds coordinate for center of hand
                 centerCoordinate = drone.findMiddleCoordinate(lmList[9], lmList[0])
+
+                # Draws and finds line for velocity
+                velocity = drone.findCenterVelo(img, centerCoordinate)
+
+                fingers = []
+
+                if lmList[tipIds[0]][1] > lmList[tipIds[0] - 1][1]:
+                    fingers.append(1)
+                else:
+                    fingers.append(0)
+                # Loop for fingers minus thumb
+                for id in range(0, 5):
+                    if lmList[tipIds[id]][2] < lmList[tipIds[id] - 2][2]:
+                        fingers.append(1)
+                    else:
+                        fingers.append(0)
+                # print(fingers)
+                noOfFingers = fingers.count(1)
+                print(noOfFingers)
+                # Navigate the drone up and down + takeoff and land based on number of fingers
+                navDrone.udTlNavigateDrone(noOfFingers, velocity)
+
                 # Creates deadzone that activates when centercoordinate is inside 
                 drone.createDeadZone(img, centerCoordinate)
+
                 # Draws line used for depth
                 x9, y9 = drone.findXY(lmList[9])
                 x0, y0 = drone.findXY(lmList[0])
                 cv2.line(img, (x9, y9), (x0, y0), (255, 0, 255), 3)
-                # Draws and finds line for velocity
-                drone.findCenterVelo(img, centerCoordinate)
                 # Finds distance between two landmarks 
                 distance1 = drone.findDistanceLms(lmList[9], lmList[0])
                 # Navigate the drone forwards and backwards witg the depth line
-                navDrone.fbnavigateDrone(distance1)
+                navDrone.fbNavigateDrone(distance1)
 
             # Calculates fps (frames per second)
             cTime = time.time()
