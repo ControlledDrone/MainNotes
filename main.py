@@ -202,7 +202,10 @@ class GUI():
         battery_status = drone.tello_battery()
 
         while True:
+            # Read webcamera input and handle error 
             success, img = cap.read()
+            if not success:
+                print("Failed to read webcamera...")
             # Flips img horizontally to create a mirror effect
             img = cv2.flip(img, 1)
             # Finds hands in the webcamera img
@@ -251,12 +254,11 @@ class GUI():
 
             k = cv2.waitKey(1)
             if k & 0xFF == ord('q'):  # close on key 'q'
-            #if cv2.waitKey(1) % 256 == 27:  # Esc key       # Kinda stupid slow to close down
-
                 print("Closing")
                 break
 
-        # Release webcamera and close all opencv windows
+        # End drone connection, release webcamera and close all opencv windows 
+        me.end()
         cap.release()
         cv2.destroyAllWindows()
 
