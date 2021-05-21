@@ -72,8 +72,7 @@ class DroneControls():
         if x < screen_center_w + dead_zone_size and x > screen_center_w - dead_zone_size and y < screen_center_h + dead_zone_size and y > screen_center_h + dead_zone_size:
             return out_of_dz == False
 
-            # Method used to find the velocity from the center of the img to a certain landmark
-
+    # Method used to find the velocity from the center of the img to a certain landmark
     def findCenterVelo(self, img, lmPos):
         x, y = lmPos[0:]
         h, w = img.shape[:2]
@@ -91,8 +90,7 @@ class DroneControls():
         distance = math.hypot(x2 - x1, y2 - y1)
         return distance
 
-        # Method used to find the middle coordinate between two landmarks
-
+    # Method used to find the middle coordinate between two landmarks
     def findMiddleCoordinate(self, lmPos1, lmPos2):
         x1, y1 = lmPos1[1:]
         x2, y2 = lmPos2[1:]
@@ -100,8 +98,7 @@ class DroneControls():
         x, y = (x1 + x2) // 2, (y1 + y2) // 2
         return x, y
 
-        # Method used to return the x and y values for a certain landmark
-
+    # Method used to return the x and y values for a certain landmark
     def findXY(self, lmPos1):
         x1, y1 = lmPos1[1:]
         return x1, y1
@@ -109,51 +106,12 @@ class DroneControls():
 
 # Class used to make the drone fly in certain directions
 class NavigateDrone():
-    # Method used for navigating the drone forwards and backwards based on the distance (of the depth line )
-    # between landmark 9 and 0
-    def fbNavigateDrone(self, distance):
-        lr, fb, ud, yv = 0, 0, 0, 0  # LeftRight, ForwardBackward, UpDown, Yaw (side to side)
-        speed = 10
+    # Method used for navigating the drone 
+    def navigateDrone(self, noOfFingers, velocity, distance1):
+        lr, fb, ud, yv = 0, 0, 0, 0 #LeftRight, ForwardBackward, UpDown, Yaw (side to side)
+        speed = 10 
 
-        # Check for landing input - if true then land and end drone connection
-        if cv2.waitKey(1) & 0xFF == ord('l'):  # close on key 'q'
-            me.land()
-            me.end()
-            print("Landing")
-        else:
-            print("DRONE IS HOVERING")
-
-            # Forwards
-        if distance < 140 and distance > 110:
-            fb = -speed - 10
-            print("Flying forwards x 10 Speed")
-        elif distance < 110 and distance > 80:
-            fb = -speed - 20
-            print("Flying forwards x 20 Speed")
-        elif distance < 80 and distance > 50:
-            fb = -speed - 30
-            print("Flying forwards x 30 Speed")
-
-        # Backwards
-        if distance > 160 and distance < 190:
-            fb = speed + 10
-            print("Flying backwards x 10 Speed")
-        elif distance > 190 and distance < 220:
-            fb = speed + 20
-            print("Flying backwards x 20 Speed")
-        elif distance > 220 and distance < 250:
-            fb = speed + 30
-            print("Flying backwards x 30 Speed")
-
-        vals = lr, fb, ud, yv
-        # To be able to senc rc controls to tello drone
-        return me.send_rc_control(vals[0], vals[1], vals[2], vals[3])
-
-    def udTlNavigateDrone(self, noOfFingers, velocity):
-        lr, fb, ud, yv = 0, 0, 0, 0  # LeftRight, ForwardBackward, UpDown, Yaw (side to side)
-        speed = 10
-
-        # If zero fingers are up
+        # If zero fingers are up 
         if noOfFingers == 0:
             print("Landing the Drone... Stand Clear")
             me.land()
@@ -166,14 +124,37 @@ class NavigateDrone():
         # If thumb
         if noOfFingers == 1:
             print("Flying down...")
-            ud = -speed - (velocity * 10)
+            ud = -speed-(velocity*10)
 
-        # if thumb and pointer finger
+        # if thumb and pointer finger 
         if noOfFingers == 2:
             print("Flying up...")
-            ud = +speed + (velocity * 10)
+            ud = +speed+(velocity*10)
+            
+        # Forwards
+        if noOfFingers == 5 and distance1 < 140 and distance1 > 110:
+            fb = -speed-10
+            print("Flying forwards x 10 Speed")
+        elif distance1 < 110 and distance1 > 80:
+            fb = -speed-20
+            print("Flying forwards x 20 Speed")
+        elif distance1 < 80 and distance1 > 50 :
+            fb = -speed-30
+            print("Flying forwards x 30 Speed")
+        
+        # Backwards
+        if noOfFingers == 5 and distance1 > 160 and distance1 < 190:
+            fb = speed+10
+            print("Flying backwards x 10 Speed")
+        elif distance1 > 190 and distance1 < 220:
+            fb = speed+20
+            print("Flying backwards x 20 Speed")
+        elif distance1 > 220 and distance1 < 250 :
+            fb = speed+30
+            print("Flying backwards x 30 Speed")
 
         vals = lr, fb, ud, yv
+
         # To be able to senc rc controls to tello drone
         return me.send_rc_control(vals[0], vals[1], vals[2], vals[3])
 
@@ -230,8 +211,6 @@ class GUI():
                 # print(fingers)
                 noOfFingers = fingers.count(1)
                 print(noOfFingers)
-                # Navigate the drone up and down + takeoff and land based on number of fingers
-                navDrone.udTlNavigateDrone(noOfFingers, velocity)
 
                 # Creates deadzone that activates when centercoordinate is inside
                 drone.createDeadZone(img, centerCoordinate)
@@ -243,7 +222,7 @@ class GUI():
                 # Finds distance between two landmarks
                 distance1 = drone.findDistanceLms(lmList[9], lmList[0])
                 # Navigate the drone forwards and backwards witg the depth line
-                navDrone.fbNavigateDrone(distance1)
+                navDrone.navigateDrone(noOfFingers, velocity, distance1)
 
             # Calculates fps (frames per second)
             cTime = time.time()
