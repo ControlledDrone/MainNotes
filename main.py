@@ -194,7 +194,7 @@ class GUI():
         while True:
             success, img = cap.read()
             # Flips img horizontally to create a mirror effect
-            img = cv2.flip(img, 1)  # Mirror image
+            img = cv2.flip(img, 1)
             # Finds hands in the webcamera img
             img = detector.findHands(img)
             # Finds landmarks in the webcamera img 
