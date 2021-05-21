@@ -103,6 +103,28 @@ class DroneControls():
         x1, y1 = lmPos1[1:]
         return x1, y1
 
+    # Method used to find open fingers 
+    def findNoOfFingers(self, img, lmList, tipIds):
+        fingers = []
+
+        if len(lmList) !=0  in img:
+            if lmList[tipIds[0]][1] > lmList[tipIds[0] - 1][1]:
+                fingers.append(1)
+            else:
+                fingers.append(0)
+
+            # Loop for fingers minus thumb
+            for id in range(0, 5):
+                if lmList[tipIds[id]][2] < lmList[tipIds[id] - 2][2]:
+                    fingers.append(1)
+                else:
+                    fingers.append(0)
+
+            noOfFingers = fingers.count(1)
+            print(noOfFingers)
+
+        return noOfFingers
+
 
 # Class used to make the drone fly in certain directions
 class NavigateDrone():
@@ -196,22 +218,6 @@ class GUI():
                 # Draws and finds line for velocity
                 velocity = drone.findCenterVelo(img, centerCoordinate)
 
-                fingers = []
-
-                if lmList[tipIds[0]][1] > lmList[tipIds[0] - 1][1]:
-                    fingers.append(1)
-                else:
-                    fingers.append(0)
-                # Loop for fingers minus thumb
-                for id in range(0, 5):
-                    if lmList[tipIds[id]][2] < lmList[tipIds[id] - 2][2]:
-                        fingers.append(1)
-                    else:
-                        fingers.append(0)
-                # print(fingers)
-                noOfFingers = fingers.count(1)
-                print(noOfFingers)
-
                 # Creates deadzone that activates when centercoordinate is inside
                 drone.createDeadZone(img, centerCoordinate)
 
@@ -221,6 +227,10 @@ class GUI():
                 cv2.line(img, (x9, y9), (x0, y0), (255, 0, 255), 3)
                 # Finds distance between two landmarks
                 distance1 = drone.findDistanceLms(lmList[9], lmList[0])
+
+                #Finds number of fingers 
+                noOfFingers = drone.findNoOfFingers(img, lmList, tipIds)
+
                 # Navigate the drone forwards and backwards witg the depth line
                 navDrone.navigateDrone(noOfFingers, velocity, distance1)
 
