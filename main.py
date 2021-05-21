@@ -100,8 +100,14 @@ class DroneControls():
 
     # Method used to return the x and y values for a certain landmark
     def findXY(self, lmPos1):
-        x1, y1 = lmPos1[1:]
-        return x1, y1
+        x, y = lmPos1[1:]
+        return x, y
+
+    def findScreenCenter(img):
+        h, w = img.shape[:2]
+        screen_center_h = h / 2
+        screen_center_w = w / 2
+        return screen_center_h, screen_center_w
 
     # Method used to find open fingers 
     def findNoOfFingers(self, img, lmList, tipIds):
@@ -113,7 +119,7 @@ class DroneControls():
             else:
                 fingers.append(0)
 
-            # Loop for fingers minus thumb
+            #Loop for fingers minus thumb
             for id in range(0, 5):
                 if lmList[tipIds[id]][2] < lmList[tipIds[id] - 2][2]:
                     fingers.append(1)
@@ -129,31 +135,39 @@ class DroneControls():
 # Class used to make the drone fly in certain directions
 class NavigateDrone():
     # Method used for navigating the drone 
-    def navigateDrone(self, noOfFingers, velocity, distance1):
+    def navigateDrone(self, centercoordinate, img, noOfFingers, velocity, distance1):
+        screen_center_h, screen_center_w = DroneControls.findScreenCenter(img)
+
         lr, fb, ud, yv = 0, 0, 0, 0 #LeftRight, ForwardBackward, UpDown, Yaw (side to side)
         speed = 10 
 
-        # If zero fingers are up 
-        if noOfFingers == 0:
+        # If zero fingers are up...
+        if noOfFingers == 2:
             print("Landing the Drone... Stand Clear")
             me.land()
 
-        # if thumb, pointer finger and middle finger
-        if noOfFingers == 3:
+        # If thumb are out...
+        if noOfFingers == 1:
             print("Taking off... Stand Clear")
             me.takeoff()
 
-        # If thumb
-        if noOfFingers == 1:
-            print("Flying down...")
-            ud = -speed-(velocity*10)
-
-        # if thumb and pointer finger 
-        if noOfFingers == 2:
+        # If pointer finger are up and...
+        if noOfFingers == 3 and centercoordinate[1] < screen_center_h:
             print("Flying up...")
+            ud = -speed-(velocity*10)
+        elif noOfFingers == 3 and centercoordinate[1] > screen_center_h:
+            print("Flying down...")
             ud = +speed+(velocity*10)
-            
-        # Forwards
+        
+        # if pointer finger and middle finger are up and...
+        if noOfFingers == 4 and centercoordinate[0] > screen_center_w:
+            print("Flying right")
+            lr = speed+(velocity*10)
+        elif noOfFingers == 4 and centercoordinate[0] < screen_center_w:
+            print("Flying left")
+            lr = -speed-(velocity*10)
+
+        # Forwards if all fingers are up and...
         if noOfFingers == 5 and distance1 < 140 and distance1 > 110:
             fb = -speed-10
             print("Flying forwards x 10 Speed")
@@ -164,17 +178,17 @@ class NavigateDrone():
             fb = -speed-30
             print("Flying forwards x 30 Speed")
         
-        # Backwards
+        # Backwards if all fingers are up and...
         if noOfFingers == 5 and distance1 > 160 and distance1 < 190:
             fb = speed+10
             print("Flying backwards x 10 Speed")
-        elif distance1 > 190 and distance1 < 220:
+        elif distance1 > 190 and distance1 < 220: 
             fb = speed+20
             print("Flying backwards x 20 Speed")
         elif distance1 > 220 and distance1 < 250 :
             fb = speed+30
             print("Flying backwards x 30 Speed")
-
+        
         vals = lr, fb, ud, yv
 
         # To be able to senc rc controls to tello drone
@@ -202,10 +216,10 @@ class GUI():
         battery_status = drone.tello_battery()
 
         while True:
-            # Read webcamera input and handle error 
+            # Read webcamera input and handle error
             success, img = cap.read()
             if not success:
-                print("Failed to read webcamera...")
+                print("Unable to capture webcamera...")
             # Flips img horizontally to create a mirror effect
             img = cv2.flip(img, 1)
             # Finds hands in the webcamera img
@@ -216,13 +230,13 @@ class GUI():
 
             if len(lmList) != 0:
                 # Finds coordinate for center of hand
-                centerCoordinate = drone.findMiddleCoordinate(lmList[9], lmList[0])
+                centerCoordinateHand = drone.findMiddleCoordinate(lmList[9], lmList[0])
 
                 # Draws and finds line for velocity
-                velocity = drone.findCenterVelo(img, centerCoordinate)
+                velocity = drone.findCenterVelo(img, centerCoordinateHand)
 
                 # Creates deadzone that activates when centercoordinate is inside
-                drone.createDeadZone(img, centerCoordinate)
+                drone.createDeadZone(img, centerCoordinateHand)
 
                 # Draws line used for depth
                 x9, y9 = drone.findXY(lmList[9])
@@ -235,7 +249,7 @@ class GUI():
                 noOfFingers = drone.findNoOfFingers(img, lmList, tipIds)
 
                 # Navigate the drone forwards and backwards witg the depth line
-                navDrone.navigateDrone(noOfFingers, velocity, distance1)
+                navDrone.navigateDrone(centerCoordinateHand, img, noOfFingers, velocity, distance1)
 
             # Calculates fps (frames per second)
             cTime = time.time()
@@ -257,8 +271,8 @@ class GUI():
                 print("Closing")
                 break
 
-        # End drone connection, release webcamera and close all opencv windows 
-        me.end()
+        # End drone connection, release webcamera and close all opencv windows
+        me.end
         cap.release()
         cv2.destroyAllWindows()
 
