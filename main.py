@@ -73,12 +73,13 @@ class DroneControls():
             return out_of_dz == False
 
     # Method used to find the velocity from the center of the img to a certain landmark
-    def findCenterVelo(self, img, lmPos):
+    def findVeloFromCenter(self, img, lmPos):
         x, y = lmPos[0:]
         h, w = img.shape[:2]
         center_dist = np.linalg.norm(np.array((x, y)) - np.array((w / 2, h / 2)))
+        # Calculating velocity variable 
         velocity = (center_dist / w) * 3.0
-        # Draws velocity line in opencv
+        # Draws velocity line in opencv with function line
         cv2.line(img, (x, y), (int(w / 2), int(h / 2)), (255, 0, 0), 5)
         return int(velocity)
 
@@ -91,7 +92,7 @@ class DroneControls():
         return distance
 
     # Method used to find the middle coordinate between two landmarks
-    def findMiddleCoordinate(self, lmPos1, lmPos2):
+    def findMiddleXYOfLms(self, lmPos1, lmPos2):
         x1, y1 = lmPos1[1:]
         x2, y2 = lmPos2[1:]
         # Calculates the middle coordinate between the two landmarks
@@ -99,20 +100,22 @@ class DroneControls():
         return x, y
 
     # Method used to return the x and y values for a certain landmark
-    def findXY(self, lmPos1):
+    def findXYofLm(self, lmPos1):
         x, y = lmPos1[1:]
         return x, y
-
+        
+    # Method returns height and width of our webcamera img    
     def findScreenCenter(img):
         h, w = img.shape[:2]
         screen_center_h = h / 2
         screen_center_w = w / 2
         return screen_center_h, screen_center_w
 
-    # Method used to find open fingers 
+    # Method used to find and return open fingers 
     def findNoOfFingers(self, img, lmList, tipIds):
+        # Creates a list for finding and storing open fingers
         fingers = []
-
+        # If there are landmarks in the webcamera image
         if len(lmList) !=0  in img:
             if lmList[tipIds[0]][1] > lmList[tipIds[0] - 1][1]:
                 fingers.append(1)
@@ -125,7 +128,7 @@ class DroneControls():
                     fingers.append(1)
                 else:
                     fingers.append(0)
-
+            # Returns number of fingers to variable noOfFingers
             noOfFingers = fingers.count(1)
             print(noOfFingers)
 
@@ -230,17 +233,17 @@ class GUI():
 
             if len(lmList) != 0:
                 # Finds coordinate for center of hand
-                centerCoordinateHand = drone.findMiddleCoordinate(lmList[9], lmList[0])
+                centerCoordinateHand = drone.findMiddleXYOfLms(lmList[9], lmList[0])
 
                 # Draws and finds line for velocity
-                velocity = drone.findCenterVelo(img, centerCoordinateHand)
+                velocity = drone.findVeloFromCenter(img, centerCoordinateHand)
 
                 # Creates deadzone that activates when centercoordinate is inside
                 drone.createDeadZone(img, centerCoordinateHand)
 
                 # Draws line used for depth
-                x9, y9 = drone.findXY(lmList[9])
-                x0, y0 = drone.findXY(lmList[0])
+                x9, y9 = drone.findXYofLm(lmList[9])
+                x0, y0 = drone.findXYofLm(lmList[0])
                 cv2.line(img, (x9, y9), (x0, y0), (255, 0, 255), 3)
                 # Finds distance between two landmarks
                 distance1 = drone.findDistanceLms(lmList[9], lmList[0])
@@ -267,13 +270,14 @@ class GUI():
             cv2.imshow("Image", img)
 
             k = cv2.waitKey(1)
-            if k & 0xFF == ord('q'):  # close on key 'q'
-                print("Closing")
-                break
-            # Safety for drone landing 
-            elif k & 0xFF == ord('l'): 
+            # Safety for drone landing on key 'l'
+            if k & 0xFF == ord('l'): 
                 print("landing") 
                 me.land()
+                break
+            # Close program on key 'q'
+            elif k & 0xFF == ord('q'):  
+                print("Closing")
                 break
 
         # End drone connection, release webcamera and close all opencv windows
