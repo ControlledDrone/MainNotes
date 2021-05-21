@@ -270,9 +270,14 @@ class GUI():
             if k & 0xFF == ord('q'):  # close on key 'q'
                 print("Closing")
                 break
+            # Safety for drone landing 
+            elif k & 0xFF == ord('l'): 
+                print("landing") 
+                me.land()
+                break
 
         # End drone connection, release webcamera and close all opencv windows
-        me.end
+        me.end()
         cap.release()
         cv2.destroyAllWindows()
 
